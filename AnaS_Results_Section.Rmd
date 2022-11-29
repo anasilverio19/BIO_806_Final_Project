@@ -1,0 +1,392 @@
+---
+title: "Results_Section_AnaSilverio"
+author: "Ana Silverio"
+date: '2022-11-15'
+output: pdf_document
+---
+
+```{r setup all the subsets, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#bag seines ---------
+bag_seine_TX <- read.csv("~/Chapter 1 Data/bag_seine/TPWD reds trout flounder drum bag seine.csv")
+
+#all packages I usually need
+library("ggplot2")
+library("tidyverse")
+library("dplyr")
+library("lubridate")
+library(ggpubr)
+
+#make the date readable
+bag_seine_TX$COMPLETION_DTTM <- as.Date(bag_seine_TX$COMPLETION_DTTM,
+                                        format = "%d%b%Y:%H:%M:%S")
+
+bag_seine_TX <- bag_seine_TX %>%
+  dplyr::mutate(year = lubridate::year(COMPLETION_DTTM), 
+                month = lubridate::month(COMPLETION_DTTM), 
+                day = lubridate::day(COMPLETION_DTTM))
+
+# make it wide 
+bag_seine_wide <- spread(bag_seine_TX, COMMON_NAME, CATCH)
+
+bag_seine_wide[is.na(bag_seine_wide)] = 0 #change NA to zero
+
+bag_seine_wide <- select(bag_seine_wide, -V1) #delete the random column
+
+bag_seine_CLEAN <- bag_seine_wide # renaming
+
+#renaming columns 
+bag_seine_CLEAN <- rename(bag_seine_CLEAN, c('Black_drum' = 'Black drum'))
+bag_seine_CLEAN <- rename(bag_seine_CLEAN, c('Red_drum' = 'Red drum'))
+bag_seine_CLEAN<- rename(bag_seine_CLEAN, c('Spotted_seatrout' = 'Spotted seatrout'))
+bag_seine_CLEAN <- rename(bag_seine_CLEAN, c('Southern_flounder' = 'Southern flounder'))
+bag_seine_CLEAN <- rename(bag_seine_CLEAN, c('Date' = 'COMPLETION_DTTM'))
+
+
+#gill nets-------
+gill_net_TX_CLEAN <- read.csv("~/Chapter 1 Data/gill_net/TPWD reds trout flounder drum gill net.csv")
+
+library("ggplot2")
+library("tidyverse")
+library("dplyr")
+library("lubridate")
+
+#change the date to a readable format
+gill_net_TX_CLEAN$COMPLETION_DTTM <- as.Date(gill_net_TX_CLEAN$COMPLETION_DTTM,
+                                             format = "%d%b%Y:%H:%M:%S")
+gill_net_TX_CLEAN <- gill_net_TX_CLEAN %>%
+  dplyr::mutate(year = lubridate::year(COMPLETION_DTTM), 
+                month = lubridate::month(COMPLETION_DTTM), 
+                day = lubridate::day(COMPLETION_DTTM))
+gill_net_TX_CLEAN <- rename(gill_net_TX_CLEAN, c('Date' = 'COMPLETION_DTTM'))
+
+#trawl------
+trawl_TX_CLEAN <- read.csv("~/Chapter 1 Data/trawl_data/TPWD reds trout flounder drum trawl.csv")
+
+#all packages I usually need
+library("ggplot2")
+library("tidyverse")
+library("dplyr")
+library("lubridate")
+
+#change the date to a readable format
+trawl_TX_CLEAN$COMPLETION_DTTM <- as.Date(trawl_TX_CLEAN$COMPLETION_DTTM,
+                                          format = "%d%b%Y:%H:%M:%S")
+trawl_TX_CLEAN <- trawl_TX_CLEAN %>%
+  dplyr::mutate(year = lubridate::year(COMPLETION_DTTM), 
+                month = lubridate::month(COMPLETION_DTTM), 
+                day = lubridate::day(COMPLETION_DTTM))
+trawl_TX_CLEAN <- rename(trawl_TX_CLEAN, c('Date' = 'COMPLETION_DTTM'))
+
+
+#add julian days to all three data sets-------
+bag_seine_CLEAN$julian <- yday(bag_seine_CLEAN$Date)
+gill_net_TX_CLEAN$julian <- yday(gill_net_TX_CLEAN$Date)
+trawl_TX_CLEAN$julian <- yday(trawl_TX_CLEAN$Date)
+
+#add CPUE column to all 3 data sets----
+bag_seine_CLEAN <-  bag_seine_CLEAN %>%
+  mutate(sst_CPUE = Spotted_seatrout / SURFACE_AREA_NUM)
+bag_seine_CLEAN <-  bag_seine_CLEAN %>%
+  mutate(rd_CPUE = Red_drum / SURFACE_AREA_NUM)
+bag_seine_CLEAN <-  bag_seine_CLEAN %>%
+  mutate(bd_CPUE = Black_drum / SURFACE_AREA_NUM)
+bag_seine_CLEAN <-  bag_seine_CLEAN %>%
+  mutate(sf_CPUE = Southern_flounder / SURFACE_AREA_NUM)
+
+gill_net_TX_CLEAN <-  gill_net_TX_CLEAN %>%
+  mutate(sst_CPUE = Spotted_seatrout / ELAPSED_TIME)
+gill_net_TX_CLEAN <-  gill_net_TX_CLEAN %>%
+  mutate(rd_CPUE = Red_drum / ELAPSED_TIME)
+gill_net_TX_CLEAN<-  gill_net_TX_CLEAN%>%
+  mutate(bd_CPUE = Black_drum / ELAPSED_TIME)
+gill_net_TX_CLEAN<-  gill_net_TX_CLEAN%>%
+  mutate(sf_CPUE = Southern_flounder / ELAPSED_TIME)
+
+trawl_TX_CLEAN <-  trawl_TX_CLEAN %>%
+  mutate(sst_CPUE = Spotted_seatrout / ELAPSED_TIME)
+trawl_TX_CLEAN <-  trawl_TX_CLEAN %>%
+  mutate(rd_CPUE = Red_drum / ELAPSED_TIME)
+trawl_TX_CLEAN<-  trawl_TX_CLEAN%>%
+  mutate(bd_CPUE = Black_drum / ELAPSED_TIME)
+trawl_TX_CLEAN<-  trawl_TX_CLEAN%>%
+  mutate(sf_CPUE = Southern_flounder / ELAPSED_TIME)
+
+# Subset using gill nets only for two bays
+gn_clean_aransas <- gill_net_TX_CLEAN %>% filter(MAJOR_AREA_CODE == "5")
+gn_clean_LLM <- gill_net_TX_CLEAN %>% filter(MAJOR_AREA_CODE == "8")
+
+# color blind paletter used:
+cbbPalette <- c("#009E73", "#56B4E9", "#E69F00","#000000", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+#julian
+julian <- 1:365 
+```
+
+# Results Section
+
+Using the gill net data set, various time series plots will be constructed. The gill net data set, in particular, is a gear type that targets adult sized fish throughout the 10 bays. To keep this report from being a mile long, it will be condensed to a two bay comparison for an event year (Winter Storm Uri in February of 2021). The two bays picked for this analysis is Aransas bay and the Lower Laguna Madre. The four species being compared within each bay are as follows: spotted seatrout, red drum, black drum and southern flounder. 
+
+# Aransas Bay using Gill Nets 
+
+Gill net surveys are only conducted in the spring and fall seasons of the year, hence the absence of data for JAN-FEB and JUN-SEPT. Because of this, the visualization of the catch per unit effort was not able to be seen on the figures of the freeze event which took place the week of February 15, 2021. The visualization will be the catch per unit effort later in the year of the event year compared to previous years without the winter storm event. 
+
+```{r spotted seatrout code ARANASA BAY, echo=FALSE}
+#spotted seatrout----
+sst_ar_gn_cpue <- ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year"
+  )
+
+#Plot
+ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+        title = "Spotted Seatrout"
+  )
+
+
+```
+
+```{r RED DRUM ARANSAS BAY, echo=FALSE}
+#red drum-----
+rd_ar_gn_cpue <-  ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year"
+  )
+#plot
+ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+        title="Red Drum"
+  )
+```
+
+```{r BLACK DRUM ARANSAS BAY, echo=FALSE}
+bd_ar_gn_cpue <- ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year"
+  )
+#plot
+ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+        title = "Black Drum"
+  )
+```
+
+```{r SOUTHERN FLOUNDER ARANSAS BAY, echo=FALSE}
+#southern flounder------
+sf_ar_gn_cpue <- ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        color = "Year",
+        x = "Time"
+  )
+#plot
+ ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        color = "Year",
+        x = "Time",
+        title = "Souther flounder"
+  )
+```
+
+```{r GGARRANGE ALL 4 PLOTS, echo = FALSE}
+#all on one plot----
+
+aransas_plot <- ggarrange(sst_ar_gn_cpue, rd_ar_gn_cpue, bd_ar_gn_cpue, sf_ar_gn_cpue, labels = c("spotted seatrout", "red drum", "black drum", "southern flounder"),
+        common.legend = TRUE,ncol = 2, nrow = 2, legend = "bottom")
+
+annotate_figure(aransas_plot, top = text_grob("Aransas Bay Gill Nets", color = "red", face = "bold", size = 14))
+```
+
+In most of these plots, the event year CPUE over time doesn't look drastically different than the non-even years. In black drum, it may not be spiking as high but these data visualization data experiments are merely to peak interest in areas in this data due to its size. One note worthy point is the black drum, past years in non event years, there is a high spikes in CPUE in the fall season and the fall season during the event year does not peak as high. This could be of interest looking into further as the freeze event in February could have maybe pushed the fish to warmer waters north of aranasas bay. I am curious to see if this is the same patterned seen in other bays for this fall season comparison.
+
+# Lower Laguna Madre
+```{r spotted seatrout code LLM, echo=FALSE}
+#spotted seatrout----
+sst_LLM_gn_cpue <- ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year"
+  )
+
+#Plot
+ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+        title = "Spotted seatrout"
+  )
+
+
+```
+
+```{r RED DRUM LLM, echo=FALSE}
+#red drum-----
+rd_LLM_gn_cpue <-  ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year"
+  )
+#plot
+ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+        title = "Red drum"
+  )
+```
+
+```{r BLACK DRUM LLM, echo=FALSE}
+bd_LLM_gn_cpue <- ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year"
+  )
+#plot
+ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+        title = "Black drum"
+  )
+```
+
+```{r SOUTHERN FLOUNDER LLM, echo=FALSE}
+#southern flounder------
+sf_LLM_gn_cpue <- ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        color = "Year",
+        x = "Time"
+  )
+#plot
+ ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.5) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE), color = "#000000", size = 2, alpha = 0.55) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        color = "Year",
+        x = "Time",
+        title = "Southern Flounder"
+  )
+```
+
+```{r GGARRANGE ALL 4 PLOTS for LLM, echo = FALSE}
+#all on one plot----
+
+LLM_plot <- ggarrange(sst_LLM_gn_cpue, rd_LLM_gn_cpue, bd_LLM_gn_cpue, sf_LLM_gn_cpue, labels = c("spotted seatrout", "red drum", "black drum", "southern flounder"),
+        common.legend = TRUE,ncol = 2, nrow = 2, legend = "bottom")
+
+annotate_figure(LLM_plot, top = text_grob("Lower Laguna Madre Gill Nets", color = "red", face = "bold", size = 14))
+```
+
+In these plots, some similar patterns are noticed in the spotted seatrout and the red drum. The black drum is of notice, as it's CPUE is much lower in the spring season of the event year compared to non-event years. The CPUE seems to return to the previous years patterns for the fall season. Could have the fish escaped the lower laguna madre, which is the southern most waters, during the spring and returned during the fall season? I would try to look further at those comparisons. Since this is more south of the aransas bay, I am curious to add a bay to the north to see if this pattern exist in those bays as well. 
+
+
+Some items to fix on this draft:
+- some placing of the labels on my figures are misaligned 
+- adding figure captions
+- adding some addition analysis of percent change of the monthly average of catch per unit effort for additional comparisons. 
+- adding an additional bay
+- cleaning up the format
