@@ -1,0 +1,472 @@
+---
+title: "Final_Project"
+author: "Ana Silverio"
+date: '2022-11-29'
+output: pdf_document
+bibliography: references.bib
+csl: apa.csl
+---
+
+```{r setup, data cleaning, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#bag seines ---------
+bag_seine_TX <- read.csv("~/Chapter 1 Data/bag_seine/TPWD reds trout flounder drum bag seine.csv")
+
+#all packages I usually need
+library("ggplot2")
+library("tidyverse")
+library("dplyr")
+library("lubridate")
+library(ggpubr)
+
+#make the date readable
+bag_seine_TX$COMPLETION_DTTM <- as.Date(bag_seine_TX$COMPLETION_DTTM,
+                                        format = "%d%b%Y:%H:%M:%S")
+
+bag_seine_TX <- bag_seine_TX %>%
+  dplyr::mutate(year = lubridate::year(COMPLETION_DTTM), 
+                month = lubridate::month(COMPLETION_DTTM), 
+                day = lubridate::day(COMPLETION_DTTM))
+
+# make it wide 
+bag_seine_wide <- spread(bag_seine_TX, COMMON_NAME, CATCH)
+
+bag_seine_wide[is.na(bag_seine_wide)] = 0 #change NA to zero
+
+bag_seine_wide <- select(bag_seine_wide, -V1) #delete the random column
+
+bag_seine_CLEAN <- bag_seine_wide # renaming
+
+#renaming columns 
+bag_seine_CLEAN <- rename(bag_seine_CLEAN, c('Black_drum' = 'Black drum'))
+bag_seine_CLEAN <- rename(bag_seine_CLEAN, c('Red_drum' = 'Red drum'))
+bag_seine_CLEAN<- rename(bag_seine_CLEAN, c('Spotted_seatrout' = 'Spotted seatrout'))
+bag_seine_CLEAN <- rename(bag_seine_CLEAN, c('Southern_flounder' = 'Southern flounder'))
+bag_seine_CLEAN <- rename(bag_seine_CLEAN, c('Date' = 'COMPLETION_DTTM'))
+
+
+#gill nets-------
+gill_net_TX_CLEAN <- read.csv("~/Chapter 1 Data/gill_net/TPWD reds trout flounder drum gill net.csv")
+
+library("ggplot2")
+library("tidyverse")
+library("dplyr")
+library("lubridate")
+
+#change the date to a readable format
+gill_net_TX_CLEAN$COMPLETION_DTTM <- as.Date(gill_net_TX_CLEAN$COMPLETION_DTTM,
+                                             format = "%d%b%Y:%H:%M:%S")
+gill_net_TX_CLEAN <- gill_net_TX_CLEAN %>%
+  dplyr::mutate(year = lubridate::year(COMPLETION_DTTM), 
+                month = lubridate::month(COMPLETION_DTTM), 
+                day = lubridate::day(COMPLETION_DTTM))
+gill_net_TX_CLEAN <- rename(gill_net_TX_CLEAN, c('Date' = 'COMPLETION_DTTM'))
+
+#trawl------
+trawl_TX_CLEAN <- read.csv("~/Chapter 1 Data/trawl_data/TPWD reds trout flounder drum trawl.csv")
+
+#all packages I usually need
+library("ggplot2")
+library("tidyverse")
+library("dplyr")
+library("lubridate")
+
+#change the date to a readable format
+trawl_TX_CLEAN$COMPLETION_DTTM <- as.Date(trawl_TX_CLEAN$COMPLETION_DTTM,
+                                          format = "%d%b%Y:%H:%M:%S")
+trawl_TX_CLEAN <- trawl_TX_CLEAN %>%
+  dplyr::mutate(year = lubridate::year(COMPLETION_DTTM), 
+                month = lubridate::month(COMPLETION_DTTM), 
+                day = lubridate::day(COMPLETION_DTTM))
+trawl_TX_CLEAN <- rename(trawl_TX_CLEAN, c('Date' = 'COMPLETION_DTTM'))
+
+
+#add julian days to all three data sets-------
+bag_seine_CLEAN$julian <- yday(bag_seine_CLEAN$Date)
+gill_net_TX_CLEAN$julian <- yday(gill_net_TX_CLEAN$Date)
+trawl_TX_CLEAN$julian <- yday(trawl_TX_CLEAN$Date)
+
+#add CPUE column to all 3 data sets----
+bag_seine_CLEAN <-  bag_seine_CLEAN %>%
+  mutate(sst_CPUE = Spotted_seatrout / SURFACE_AREA_NUM)
+bag_seine_CLEAN <-  bag_seine_CLEAN %>%
+  mutate(rd_CPUE = Red_drum / SURFACE_AREA_NUM)
+bag_seine_CLEAN <-  bag_seine_CLEAN %>%
+  mutate(bd_CPUE = Black_drum / SURFACE_AREA_NUM)
+bag_seine_CLEAN <-  bag_seine_CLEAN %>%
+  mutate(sf_CPUE = Southern_flounder / SURFACE_AREA_NUM)
+
+gill_net_TX_CLEAN <-  gill_net_TX_CLEAN %>%
+  mutate(sst_CPUE = Spotted_seatrout / ELAPSED_TIME)
+gill_net_TX_CLEAN <-  gill_net_TX_CLEAN %>%
+  mutate(rd_CPUE = Red_drum / ELAPSED_TIME)
+gill_net_TX_CLEAN<-  gill_net_TX_CLEAN%>%
+  mutate(bd_CPUE = Black_drum / ELAPSED_TIME)
+gill_net_TX_CLEAN<-  gill_net_TX_CLEAN%>%
+  mutate(sf_CPUE = Southern_flounder / ELAPSED_TIME)
+
+trawl_TX_CLEAN <-  trawl_TX_CLEAN %>%
+  mutate(sst_CPUE = Spotted_seatrout / ELAPSED_TIME)
+trawl_TX_CLEAN <-  trawl_TX_CLEAN %>%
+  mutate(rd_CPUE = Red_drum / ELAPSED_TIME)
+trawl_TX_CLEAN<-  trawl_TX_CLEAN%>%
+  mutate(bd_CPUE = Black_drum / ELAPSED_TIME)
+trawl_TX_CLEAN<-  trawl_TX_CLEAN%>%
+  mutate(sf_CPUE = Southern_flounder / ELAPSED_TIME)
+
+# Subset using gill nets only for two bays
+gn_clean_aransas <- gill_net_TX_CLEAN %>% filter(MAJOR_AREA_CODE == "5")
+gn_clean_LLM <- gill_net_TX_CLEAN %>% filter(MAJOR_AREA_CODE == "8")
+
+# color blind paletter used:
+cbbPalette <- c("#009E73", "#56B4E9", "#E69F00","#000000", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+#julian
+julian <- 1:365 
+```
+
+# Final Project BIO 806 Data Science
+## A peak inside: Assessing the resistance and resilience of important recreational species to extreme events in coastal Texas.
+
+# INTRODUCTION 
+### Overall Extreme Events
+
+  Extreme events are known to disrupt marine environments in a multitude of ways ranging from habitat destruction to population collapses [@bailey_coastal_2016; @kim_considering_2015; @matich_effects_2020; @ummenhofer_extreme_2017; @van_oldenborgh_attribution_2017]. Extreme events are categorized in different ways but the most notable being natural storms and weather anomalies like hurricanes, blizzards, cold snaps, droughts, and flooding. Each of these events brings about their own specific detail of destruction where the local ecosystem’s survivability is tested [@biggs_reproductive_2018; @matich_effects_2020; @van_oldenborgh_attribution_2017]. Not only is the local biodiversity tested but also the local community enduring the brunt of the storm, may rely on the health of their systems’ biodiversity in ways like fishing, income, a food source and recreational activities[@kim_considering_2015; @maxwell_conservation_2019; @perret_effects_2010] Extreme weather events have the power to affect these various aspects of a community and the severity and fluctuation of events have increased with the warming of our climate. Due to global climate change, extreme weather events are also predicted to have an increase in frequency and severity on marine coastal ecosystems [@trenberth_hurricane_2018; @van_oldenborgh_attribution_2017]. As the climate changes it demands a better understanding how important fish populations recover from these types of extreme events. 
+
+### Texas Coastline System - Gulf of Mexico
+  The Texas coast feeds into the Gulf of Mexico and is made up of a few barrier islands. The unique attribute about the Texas coast is it has one of the largest barrier islands in the world, Padre Island, creating a unique hyper saline environment within certain bays due to the lack of water mixing from the salt and freshwater inputs [@national_park_service_longest_2020]. This can make the bays along the Texas coast unique in their response to similar extreme events compared to other gulf coast states and therefore requires its only specific analysis. 
+  
+### Texas Recreational Fishing
+In Texas the coastline is fronted with a variety of these extreme weather events that coastal fish species must respond to. Coastal fish species are incredibly important to Texas ecosystem health and its economy and an understanding of how these populations react to disturbances can contribute to aiding in its survival during these extreme events [@adams_economic_2004]. Economically, the recreational fisheries industry in Texas is responsible for billions of dollars to the state’s economy [@national_marine_fisheries_service_fisheries_2018] and their top four recreationally sought fish species are closely managed by the Texas Parks and Wildlife Department. A multitude of people travel from across the country to the Texas coast to relish on their recreational fishing hobbies and due to the opportunities to fish a variety of sport fish that Texas is home to. These important sport fish species include, red drum (Sciaenops ocellatus), spotted seatrout (Cynoscion nebulosus), black drum (Pogonias cromis), and Southern Flounder (Paralichthys lethostigma). Because of their popularity, research focused on how different factors and outside forces affect their population stability have interested researchers across the Gulf of Mexico. Past studies have identified how similar sport fish populations in the Gulf of Mexico have shown to differ in recovery and resilience on the Florida coast during a cold snap, causing regime shifts in the community structure [@santos_shift_2016;@stevens_resilience_2016]. Whereas during a hurricane event on the Texas coast, some sport fishes showed resilience during the eye of Hurricane Harvey by spawning during the extreme event [@biggs_reproductive_2018]. Therefore, understanding how these sport fish species respond to a variety of extreme events will aid in identifying patterns between type of extreme event and the specific fish population enduring the storm. The resilience or vulnerability of fish populations under the duress of extreme events have been studied mostly under the context of 1 event or a few species particularly off the coast of Florida or other parts of the world [@perret_effects_2010; @stevens_resilience_2016]. Understanding the same parameters but under the duress of multiple events or across multiple events can give specific information that can enable department managers for a more specific management plan. 
+
+### Objectives
+The objective of this study is to examine these long-term trends of important recreational sport fishes along the Texas coast from fishery independent survey data to 
+
+- (1) understand how fish populations in different bays may have differed during an event
+- (2) how different fish populations differed within the same bay.
+
+# METHODS
+
+*The data used in this study is courtesy of the Texas Parks and Wildlife Department who conducts the independent fisheries surveys that collect the catch data used in this project.*
+  
+Both independent and dependent data can provide long term information about a fish population but in this case, we will only be focused on using the independent data set due to the time limit of this study. [@pennino_fishery-dependent_2016]. The independent data will consist of one gear type of  gillnets and which has catch data and CPUE for 4 species: red drum (Sciaenops ocellatus), spotted seatrout (Cynoscion nebulosus), black drum (Pogonias cromis), and southern flounder (Paralichthys lethostigma). For gill nets, the sampling by Texas Parks and Wildlife occurs in 2 seasons, during the spring and during the fall. There is no data collection in the winter months (Dec-March) and the summer months (Jul-Aug). Because of this, the time series plots will have no data during those months and the analysis occurs around the months of April to end of June for the spring and September to end of November for the fall season. The gill nets are deployed by fishery biologists working for the coastal fisheries division of Texas Parks and Wildlife and its soak time in the water is denoted by hours. This gives us the metric for our catch per unit effort (CPUE) in catch per hour.
+  
+Due to the nature of this data set, evaluating preliminary results is essential in further narrowing the scope of this study. To do this, time series plots of time vs CPUE (catch per unit effort) were created using ggplot(), and other packages that aid in reading dates like lubridate() and str(). The time series plots were plotted on Julian day in order to have multiple series on the same figure showing the event year (the year in which the specific extreme event occurred) compared to previous years.
+
+The events that was the focus for this project is Winter Storm Uri in February of 2021. Time series plots were focused on the lower laguna madre,and aransas bay because they cover a portion of the central and southernmost bay along the coastline. The time series plots were also constructed with the appropriate aesthetics to make the comparisons visually understandable. The event year (2021) is always in black (the darker shade) with a dotted line. The CPUE of 2021 for the respective fish species is then compared to the non-event years, going back 3 years to 2020, 2019 an 2018. Something to denote about this specific analysis is there is no spring CPUE effort data for 2020 as this was the year of onset of the COVID-19 pandemic lockdown that shut down survey operations for the spring season and therefore has no data. 
+
+# RESULTS
+
+### Data Cleaning
+
+One of the first steps of this project was to conduct a series of steps of data cleaning to prepare the data to be constructed into legible time series plots. The data-cleaning code is included in the R Markdown file as well as at this project's repository which can be found here https://github.com/anasilverio19/BIO_806_Final_Project on github.
+
+### Construction of the time series plots
+
+Using the gill net data set, various time series plots were constructed. The gill net data set, in particular, is a gear type that targets adult sized fish throughout the 10 bays. To keep this report from being a mile long, it will be condensed to a two bay comparison for an event year (Winter Storm Uri in February of 2021). The two bays picked for this analysis is Aransas bay and the Lower Laguna Madre. The four species being compared within each bay are as follows: spotted seatrout, red drum, black drum and southern flounder. 
+
+\pagebreak
+## Aransas Bay using Gill Nets 
+
+Gill net surveys are only conducted in the spring and fall seasons of the year, hence the absence of data for JAN-FEB and JUN-SEPT. Because of this, the visualization of the catch per unit effort was not able to be seen on the figures of the freeze event which took place the week of February 15, 2021. The visualization shows the catch per unit effort later in the year of the event (2021) compared to previous years without the winter storm event.
+
+```{r spotted seatrout code ARANASA BAY, echo=FALSE, fig.cap="This time series plot shows the spotted seatrout CPUE over time in Aransas Bay for 2021 (freeze event year), 2020, 2019 and 2018. The event year is denoted by a dotted line while the non-event years are denoted by a solid line."}
+#spotted seatrout----
+sst_ar_gn_cpue <- ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size = 0.8) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype = 3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+  )
+
+#Plot
+ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size = 0.8) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype = 3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+        title = "Spotted Seatrout"
+  )
+
+
+```
+
+```{r RED DRUM ARANSAS BAY, echo=FALSE, fig.cap="This time series plot shows the red drum CPUE over time in Aransas Bay for 2021 (freeze event year), 2020, 2019 and 2018. The event year is denoted by a dotted line while the non-event years are denoted by a solid line."}
+#red drum-----
+rd_ar_gn_cpue <-  ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size = 0.8) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype=3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+  )
+#plot
+ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size = 0.8) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype=3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+        title="Red Drum"
+  )
+```
+
+```{r BLACK DRUM ARANSAS BAY, echo=FALSE, fig.cap="This time series plot shows the black drum CPUE over time in Aransas Bay for 2021 (freeze event year), 2020, 2019 and 2018. The event year is denoted by a dotted line while the non-event years are denoted by a solid line."}
+bd_ar_gn_cpue <- ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size=0.8) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype=3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+  )
+#plot
+ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size=0.8) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype=3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+        title = "Black Drum"
+  )
+```
+
+```{r SOUTHERN FLOUNDER ARANSAS BAY, echo=FALSE, fig.cap="This time series plot shows the southern flounder CPUE over time in Aransas Bay for 2021 (freeze event year), 2020, 2019 and 2018. The event year is denoted by a dotted line while the non-event years are denoted by a solid line."}
+#southern flounder------
+sf_ar_gn_cpue <-  ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size =0.8) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype = 3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        color = "Year",
+        x = "Time",
+  )
+#plot
+ ggplot(data = gn_clean_aransas %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size =0.8) + 
+  geom_line(data = gn_clean_aransas %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype = 3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        color = "Year",
+        x = "Time",
+        title = "Souther flounder"
+  )
+```
+
+\pagebreak
+```{r GGARRANGE ALL 4 PLOTS, echo = FALSE, fig.cap="Combinding all 4 figures into one for a condense viewing experience of the four species CPUE over time in Aransas Bay"}
+#all on one plot----
+
+aransas_plot <- ggarrange(sst_ar_gn_cpue, rd_ar_gn_cpue, bd_ar_gn_cpue, sf_ar_gn_cpue, labels = c("spotted seatrout", "red drum", "black drum", "southern flounder"),
+        common.legend = TRUE,ncol = 2, nrow = 2, legend = "bottom")
+
+annotate_figure(aransas_plot, top = text_grob("Aransas Bay Gill Nets", color = "#8B0000", face = "bold", size = 14))
+```
+
+
+Throughout Figures 1-4, the event year CPUE over time doesn't look drastically different than the non-even years. In black drum, it may not be spiking as high but these data visualization data experiments are merely to peak interest in areas to its size. One note worthy point is the black drum, in non event years there is a high spikes in CPUE in the fall season and the fall season during the event year does not peak as high. This could be of interest looking into further. 
+
+
+\pagebreak
+
+## Lower Laguna Madre using Gill Nets
+```{r spotted seatrout code LLM, echo=FALSE, fig.cap="This time series plot shows the spotted seatrout CPUE over time in the Lower Laguna Madre for 2021 (freeze event year), 2020, 2019 and 2018. The event year is denoted by a dotted line while the non-event years are denoted by a solid line."}
+#spotted seatrout----
+sst_LLM_gn_cpue <- ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size = 0.8) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype = 3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year"
+  )
+
+#Plot
+ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size = 0.8) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sst_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype = 3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+        title = "Spotted seatrout"
+  )
+
+
+```
+
+```{r RED DRUM LLM, echo=FALSE, fig.cap="This time series plot shows the red drum CPUE over time in the Lower Laguna Madre for 2021 (freeze event year), 2020, 2019 and 2018. The event year is denoted by a dotted line while the non-event years are denoted by a solid line."}
+#red drum-----
+rd_LLM_gn_cpue <-  ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size = 0.8) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype = 3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year"
+  )
+#plot
+ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size = 0.8) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = rd_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype = 3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+        title = "Red drum"
+  )
+```
+
+```{r BLACK DRUM LLM, echo=FALSE, fig.cap="This time series plot shows the black drum CPUE over time in the Lower Laguna Madre for 2021 (freeze event year), 2020, 2019 and 2018. The event year is denoted by a dotted line while the non-event years are denoted by a solid line."}
+bd_LLM_gn_cpue <- ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size = 0.8) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype = 3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year"
+  )
+#plot
+ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size = 0.8) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = bd_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype = 3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        x = "Time",
+        color = "Year",
+        title = "Black drum"
+  )
+```
+
+```{r SOUTHERN FLOUNDER LLM, echo=FALSE, fig.cap= "This time series plot shows the southern flounder CPUE over time in the Lower Laguna Madre for 2021 (freeze event year), 2020, 2019 and 2018. The event year is denoted by a dotted line while the non-event years are denoted by a solid line." }
+#southern flounder------
+sf_LLM_gn_cpue <- ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size = 0.8) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype = 3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        color = "Year",
+        x = "Time"
+  )
+#plot
+ ggplot(data = gn_clean_LLM %>% filter(year > 2017), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE, color = year)) +
+  scale_colour_manual(values=cbbPalette) +
+  geom_line(aes(color=as.factor(year)), alpha = 0.8, size = 0.8) + 
+  geom_line(data = gn_clean_LLM %>% filter(year == 2021), mapping = aes(x = as.Date(julian, origin = as.Date("2021-01-01")), y = sf_CPUE), color = "#000000", size = 2, alpha = 0.55, linetype =3) +
+  scale_x_date(date_labels = "%b", date_breaks = "1 month") +
+  theme_classic() + 
+  geom_vline(xintercept = as.numeric(as.Date("2021-02-15")), linetype=4, size = 1) +
+  labs( y = "CPUE (#/hr)",
+        color = "Year",
+        x = "Time",
+        title = "Southern Flounder"
+  )
+```
+
+\pagebreak
+
+```{r GGARRANGE ALL 4 PLOTS for LLM, echo = FALSE, fig.cap= "Combinding all 4 figures into one for a condense viewing experience of the four species CPUE over time in the Lower Laguna Madre"}
+#all on one plot----
+
+LLM_plot <- ggarrange(sst_LLM_gn_cpue, rd_LLM_gn_cpue, bd_LLM_gn_cpue, sf_LLM_gn_cpue, labels = c("spotted seatrout", "red drum", "black drum", "southern flounder"),
+        common.legend = TRUE,ncol = 2, nrow = 2, legend = "bottom", font.label=list(color="black",size=13), hjust = -0.8)
+
+annotate_figure(LLM_plot, top = text_grob("Lower Laguna Madre Gill Nets", color = "#8B0000", face = "bold", size = 14))
+```
+
+In these time series plots, there are some bay specific differences that are noted throughout figures 6-9, where the same species' CPUE is different in the Lower Laguna Madre compared to it's Aransas Bay CPUE. The red drum looks different in the spring season event year CPUE.The peaks are not as high for the fall season event year CPUE in the Lower Laguna Madre with southern flounder compared to the non-event years.
+
+
+# DISCUSSION
+
+### Species Specific Differences
+
+*Arasnas Bay*
+
+Throughout the figures (1-10), there are some species specific differences that are seen within each bay. In Aransas bay (Figures 1-5), the CPUE of the event year compared to non-event years looks consistent except for the black drum. Spotted seatrout, red drum and southern flounder CPUE follow similar patterns in the event year compared to the non-event years, reaching peaks and lows around roughly the same parts of the season. 
+
+*Lower Laguna Madre*
+
+In the Lower Laguna Madre (Figures 6-10), the CPUE of the event year compared to non-event years looks consistent except for the black drum and possibly the southern flounder. The black drum and southern flounder (Figures 8 and 9) show differences in event year CPUE compared to the non-event years. Specifically, they show that the event CPUE does not reach the same peaks as non-even years. 
+
+The black drum (Figure 8) has a much lower CPUE in the event year in the spring season than that same fall season. In actuality, it is the fall season looks similar to the past years, with the spring season of black drum CPUE in 2021 being much lower than 2019 and 2018. This is a pattern worth exploring more in the future as there could be a multitude of reasons why in the Lower Laguna Madre, the fall season CPUE recovered from the spring season CPUE. The black drum could have escaped to warmer waters during the freeze event and come back to the bay by the time the fall season survey was being conducted leading to the higher CPUE.
+
+Another panel of interest is the red drum in Figure 7, the spring season CPUE in the event year is peaking higher than past CPUE in non-event years. This is a pattern to explore further into the past in non-freeze years to understand how different this trend is. Red drum do appear to have been unaffected the most by the freeze event disturbance compared to the other 3 fish species (Figure 10).
+
+### Bay Specific Differences
+
+Within the same species, there are differences in CPUE on the event year between the two bays.
+
+The fish species that had similar trends on the event year CPUE are spotted seatrout and red drum (Figures 1-2 and Figures 6-7). The fish species that differed in their trends on the event year CPUE between the two bays are the black drum and the southern flounder (Figures 3-4 and Figures 8-9). For the black drum, in Aransas bay the event year CPUE remained low but in the Lower Laguna Madre, the CPUE appears to recover to normal trends by the fall season. This could be an indicator of some kind of refuge action taken by the black drum after the freeze event in February of that year. where the more northern bay Aransas bay, didn't have black drum return but in the southern most bay they did causing the fall season CPUE to follow the trend seen in Figure 8. Southern flounder CPUE trend on the event year differed as well between the two bays, in the southern most bay, the CPUE trend does not reach the same peaks as the Aransas bay and compared to previous non-event years. 
+
+### Overall Conclusion
+
+These data experiments were able to give insight in trends of interest and where to dig deeper for future analysis. This data expands 10 bays and can very quickly turn into a 100+ plot analysis, this project has allowed some inclinations to dig into trends in the Lower Laguna Madre to the northern most bays and especially for the black drum and red drum. These analyses can bring insight to how these fish abundances could have differed during a freeze event and will be applied to other types of extreme events.
+
+\pagebreak
+# REFERENCES
+
+
+
+
+
+
+
+
+
+
+
+
